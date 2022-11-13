@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Text;
 using System.Media;
+using System.Drawing;
+using System.ComponentModel;
 
 namespace tetris
 {
@@ -54,6 +56,19 @@ namespace tetris
                 {true, true, true}
             }
         };
+
+        static ConsoleColor[] pieceColors =
+        {
+            ConsoleColor.Cyan,
+            ConsoleColor.Yellow,
+            ConsoleColor.DarkMagenta,
+            ConsoleColor.Green,
+            ConsoleColor.Red,
+            ConsoleColor.Blue,
+            ConsoleColor.DarkYellow
+        
+        };
+
         static string ScoresFileName = "scores.txt";
         static int[] ScorePerLines = { 0, 40, 100, 300, 1200 };
         //State
@@ -73,6 +88,7 @@ namespace tetris
         static Random Random = new Random();
         static bool PauseMode = false;
         static bool PlayGame = true;
+        static private bool[,] currentUnturnedPiece;
 
         static void Main(string[] args)
         {
@@ -108,7 +124,7 @@ namespace tetris
             Console.WindowWidth = ConsoleCols;
             Console.BufferHeight = ConsoleRows;
             Console.BufferWidth = ConsoleCols;
-            CurrentFigure = TetrisFigures[Random.Next(0, TetrisFigures.Count)];
+            CurrentFigure = currentUnturnedPiece = TetrisFigures[Random.Next(0, TetrisFigures.Count)];
             NextFigure = TetrisFigures[Random.Next(0, TetrisFigures.Count)];
 
             while (true)
@@ -200,7 +216,7 @@ namespace tetris
                     {
                         File.AppendAllLines(ScoresFileName, new List<string>
                         {
-                            $"[{DateTime.Now.ToString()}] {Environment.UserName} => {Score}"
+                            $"[{DateTime.Now}] {Environment.UserName} => {Score}"
                         });
                         var scoreAsString = Score.ToString();
                         scoreAsString += new string(' ', 7 - scoreAsString.Length);
@@ -208,10 +224,29 @@ namespace tetris
                         Write("║  Game        ║", 6, 5);
                         Write("║     over!    ║", 7, 5);
                         Write($"║      {scoreAsString} ║", 8, 5);
-                        Write("╚══════════════╝", 9, 5);
-                        PlayGame = false;
-                        Thread.Sleep(1000000);
-                        return;
+                        Write("╠══════════════╣", 9, 5);
+                        Write("║              ║", 10, 5);
+                        Write("║  Try Again?  ║", 11, 5);
+                        Write("║     Y/N      ║", 12, 5);
+                        Write("╚══════════════╝", 13, 5);
+                        ConsoleKeyInfo key;
+                        
+                        while (true)
+                        {
+                            key = Console.ReadKey();
+                            if (key.Key == ConsoleKey.N)
+                            {
+                                PlayGame = false;
+                                Environment.Exit(0);
+                            }
+                            else if (key.Key == ConsoleKey.Y)
+                            {
+                                Score = 0;
+                                ClearField();
+                                break;
+                            }
+
+                        }
                     }
                 }
 
@@ -221,7 +256,7 @@ namespace tetris
                 DrawTetrisField();
                 DrawCurrentFigure();
                 //wait 40 miliseconds
-                Thread.Sleep(40);
+                Thread.Sleep(40 - Level);
             }
         }
 
@@ -230,6 +265,8 @@ namespace tetris
             NextFigure = TetrisFigures[Random.Next(0, TetrisFigures.Count)];
             return NextFigure;
         }
+
+        
 
         private static void UpdateLevel()
         {
@@ -361,8 +398,19 @@ namespace tetris
                 }
             }
 
-            CurrentFigure = NextFigure;
+            CurrentFigure = currentUnturnedPiece = NextFigure;
             GetNextFigure();
+        }
+
+        private static void ClearField()
+        {
+            for (int row = 0; row < TetrisRows; row++)
+            {
+                for (int col = 0; col < TetrisCols; col++)
+                {
+                    TetrisField[row, col] = false;
+                }
+            }
         }
 
         static bool Collision(bool[,] figure)
@@ -441,7 +489,6 @@ namespace tetris
 
         static void DrawCurrentFigure()
         {
-
             for (int row = 0; row < CurrentFigure.GetLength(0); row++)
             {
 
@@ -449,7 +496,9 @@ namespace tetris
                 {
                     if (CurrentFigure[row, col])
                     {
+                        Console.ForegroundColor = pieceColors[TetrisFigures.FindIndex(figure => figure == currentUnturnedPiece)];
                         Write($"{FigureSymbol}", row + 1 + CurrentFigureRow, col + 1 + CurrentFigureCol);
+                        Console.ForegroundColor = ConsoleColor.White;
                     }
                 }
             }
@@ -465,7 +514,9 @@ namespace tetris
                 {
                     if (NextFigure[row, col])
                     {
+                        Console.ForegroundColor = pieceColors[TetrisFigures.FindIndex(figure => figure == NextFigure)];
                         Write($"{FigureSymbol}", row + 1 + NextFigureRow, col + 1 + NextFigureCol);
+                        Console.ForegroundColor = ConsoleColor.White;
                     }
                 }
             }
